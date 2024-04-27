@@ -8,7 +8,9 @@ config();
 const vr_PORT = process.env.PORT || 5210;
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: process.env.CONNECTION_URL_FRONT
+}));
 app.use(express.json());
 
 
