@@ -1,9 +1,6 @@
-import axios from "axios"
 import { objAlert2 } from "./sweetAlert";
 
-function Notes({Title,Text,vrDate,vrID,funcMessage,vrDelete}){
-
-    const vrENV = import.meta.env.VITE_CONNECTION_BD;
+function Notes({Title,Text,vrDate_D,vrDate_H,vrID,funcMessage,vrDelete}){
 
     const funcDelete = (e)=>{
         objAlert2.fire({
@@ -15,25 +12,10 @@ function Notes({Title,Text,vrDate,vrID,funcMessage,vrDelete}){
             denyButtonText: "Delete"
         }).then((res)=>{
             if(res.isDenied){
-                const formData = new FormData();
-                formData.append("id",vrID);
-                axios({
-                    method: "post",
-                    url:`${vrENV}/deleteNote`,
-                    data: formData,
-                    headers: { 
-                        "Content-Type": "application/json",
-                      },
-                }).then(res=>{
-                    if(res.data.Status === "delete notes"){
-                        console.log(res.data.Status);
-                        vrDelete(true);
-                    }
-                }).catch(err=>{console.log(err)});
+                vrDelete(vrID);
             }
         })
-
-        
+ 
     }
 
     return(
@@ -46,7 +28,8 @@ function Notes({Title,Text,vrDate,vrID,funcMessage,vrDelete}){
             </div>
             <div className="card-footer d-flex align-items-center justify-content-between p-4">
             <div>
-                <span>{vrDate}</span>
+                <span>{vrDate_D}</span>
+                <span>{vrDate_H}</span>
             </div>
             <div>
                 <button className="card-btnDelate" data-bs-toggle="modal" data-bs-target="#staticBackdrop" onClick={(e)=>{

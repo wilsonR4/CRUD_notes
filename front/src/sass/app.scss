@@ -70,8 +70,16 @@ main{
         &-footer{
             span{
                 color: #6e6e6e;
-                font-size: 13px;
+                &:first-child{
+                    font-size: 13px;
+                }
+                &:last-child{
+                    font-size: 10px;
+                    margin-left: 5px;
+                }
             }
+            
+            
             .card-btnDelate{
                 width: 45px;
                 height: 45px;

@@ -1,5 +1,5 @@
 import { useState,useEffect } from 'react'
-import axios from "axios"
+import supabase from './supabase/client';
 import { Notes as NotesComponent } from './components/notes'
 import {objAlert2,objAlert2Mixin} from "./components/sweetAlert"
 
@@ -7,34 +7,43 @@ let vr_input_title = "";
 let vr_input_text = "";
 const month = ["January","February","March","April","June","July","August","September","October","November","December"];
 
-
 function App() {
   
   //variables
-  const vrENV = import.meta.env.VITE_CONNECTION_BD;
   const [values,setValues] = useState({title: "", text: ""});
   const [valuesBD,setValuesBD] = useState([]);
   const [posID,setPosID] = useState(0);
   //variables of setting
   const [stateNote,setStateNote] = useState(false);
-  const [refresh,setRefresh] = useState("");
   const [modeEditing,setModeEditing] = useState(false);
   const [vrSearch,setSearch] = useState("");
-  const formData = new FormData();
-  const objDate = new Date();
-  const noteDate = {day:0,month:0,year:0};
 
   useEffect(()=>{
-    axios({method:"get", url: `${vrENV}/showNoteBD`})
-    .then(res=>{
-      setValuesBD(res.data.Data);
-      setRefresh(false);
-    })
-    .catch(err=>{return console.log(err)});
-  }, [refresh]);
+    getNotes();
+  }, []);
 
-  console.log(`${vrENV}`);
+  const getNotes = async()=>{
+    try{
+      const { data,error } = await supabase.from("list_notes").select("*");
+      if(error)throw error;
+      if(data !== null){
+        setValuesBD(data);
+      }
+    }catch(error){
+      console.log(error);
+    }
+  }
 
+  const dateNT = (date)=>{
+    const result = new Date(date);
+    const day = {
+      d: result.toLocaleDateString(),
+      h: result.toLocaleTimeString()
+    };
+    return day;
+  }
+
+  //
   const emptyFields = ()=>{
     document.getElementById("input_title").value = "";
     document.getElementById("input_text").value = "";
@@ -46,6 +55,7 @@ function App() {
     values.text = "";
   }
 
+  //
   const Notes = (e)=>{
     if(e.target.id === "input_title"){
       vr_input_title = e.target.value;
@@ -66,6 +76,7 @@ function App() {
     }
   }
 
+  //
   const CloseNote = (e)=>{
     document.getElementById("input_title").value = "";
     document.getElementById("input_text").value = "";
@@ -76,6 +87,7 @@ function App() {
     values.text = "";
   }
 
+  //
   const CloseEditing = (e)=>{
     objAlert2.fire({
       icon:"question",
@@ -96,70 +108,51 @@ function App() {
     }));
   }
   
-  const systemSave = (e)=>{
+  const systemSave = async(e)=>{
     e.preventDefault();
     if(stateNote === "newNote"){
-      noteDate.day = objDate.getDate();
-      noteDate.month = month[objDate.getMonth()];
-      noteDate.year = objDate.getFullYear();
-      formData.append("noteTitle",values.title);
-      formData.append("noteText",values.text);
-      formData.append("noteDate",`${noteDate.month},${noteDate.day} ${noteDate.year}`);
-      
-      axios({
-        method: "post",
-        url: `${vrENV}/save`,
-        data: formData,
-        headers: { 
-          "Content-Type": "application/json",
-        },
-      })
-      .then(res=>{
-        if(res.data.Status === "new notes"){
-          objAlert2Mixin.fire({icon: "success", title:<span className="text-success">New note</span>});
-          emptyFields();
-          setRefresh(true);
-        }
-      })
-      .catch(err=>{return console.log(err)});
+      try{
+        const {data,error} = await supabase.from("list_notes").insert([
+          {title: values.title,description: values.text}
+        ]);
+        if(error)throw error;
+        objAlert2Mixin.fire({icon: "success", title:<span className="text-success">New note</span>});
+        emptyFields();
+        getNotes();
+      }catch(err){
+        console.log(err);
+      }
     }else if(stateNote === "modifyNote"){
-      noteDate.day = objDate.getDate();
-      noteDate.month = month[objDate.getMonth()];
-      noteDate.year = objDate.getFullYear();
-
-      formData.append("noteTitle",values.title);
-      formData.append("noteText",values.text);
-      formData.append("noteDate",`${noteDate.month},${noteDate.day} ${noteDate.year}`);
-      formData.append("id",posID);
-      
-      axios({
-        method: "post",
-        url: `${vrENV}/modifyBD`,
-        data: formData,
-        headers: { 
-          "Content-Type": "application/json",
-        },
-      })
-      .then(res=>{
-        if(res.data.Status === "modify notes"){
-          objAlert2Mixin.fire({icon: "success", title:<span className="text-success">Modify note</span>});
-          emptyFields();
-          setRefresh(true);
-        }
-      })
-      .catch(err=>{return console.log(err)});
+      try{
+        const {data,error} = await supabase.from("list_notes").update(
+          {title: values.title,description: values.text}
+        ).eq("id",posID);
+        if(error)throw error;
+        objAlert2Mixin.fire({icon: "success", title:<span className="text-success">Modify note</span>});
+        getNotes();
+        emptyFields();
+      }catch(err){
+        console.log(err);  
+      }
     }
   }
 
-  const noteTrash = (e)=>{
-    objAlert2Mixin.fire({icon:"success", title: <span className="text-success">Delete successfully</span>});
-    setSearch("");
-    emptyFields();
-    setRefresh(e);
+  const noteTrash = async(id)=>{
+    console.log(id)
+    try{
+      const {data,error} = await supabase.from("list_notes").delete().eq("id",id);
+      if(error)throw error;
+      objAlert2Mixin.fire({icon: "success", title:<span className="text-success">Delete successfully</span>});
+      getNotes();
+      setSearch("");
+      emptyFields();
+    }catch(err){
+      console.log(err);
+    }
   }
 
   //search
-  const filterNotesBD = !vrSearch ? valuesBD : valuesBD.filter((item)=> item.vr_title.toLowerCase().includes(vrSearch.toLocaleLowerCase()));
+  const filterNotesBD = !vrSearch ? valuesBD : valuesBD.filter((item)=> item.title.toLowerCase().includes(vrSearch.toLocaleLowerCase()));
 
   return (
     <>
@@ -187,14 +180,15 @@ function App() {
           <div className="d-flex align-items-center justify-content-start flex-wrap mt-2 px-2">
             
             {(filterNotesBD.length <= 0)?
-              "notes not exit..." :
+              (<div className="">Without notes</div>) :
               filterNotesBD.map((itemBD,index)=>
                 (
                   <NotesComponent
                     key={index}
-                    Title={itemBD.vr_title}
-                    Text={itemBD.vr_text}
-                    vrDate={itemBD.vr_fecha}
+                    Title={itemBD.title}
+                    Text={itemBD.description}
+                    vrDate_D={dateNT(itemBD.created_at).d}
+                    vrDate_H={dateNT(itemBD.created_at).h}
                     vrID={itemBD.id}
                     funcMessage={(message,st)=>{setPosID(message);setModeEditing(true);setStateNote(st)}}
                     vrDelete={noteTrash}
@@ -212,13 +206,13 @@ function App() {
                       valuesBD.map(itemBD=>{
                         if(itemBD.id === posID){
                           setModeEditing(false);
-                          document.getElementById("input_title").value = itemBD.vr_title;
-                          document.getElementById("input_text").value = itemBD.vr_text;
-                          vr_input_title = itemBD.vr_title;
-                          vr_input_text = itemBD.vr_text;
-                          values.title = itemBD.vr_title;
-                          values.text = itemBD.vr_text;
-                          document.getElementById("topInfo_textarea").innerText = `${itemBD.vr_fecha}`;
+                          document.getElementById("input_title").value = itemBD.title;
+                          document.getElementById("input_text").value = itemBD.description;
+                          vr_input_title = itemBD.title;
+                          vr_input_text = itemBD.description;
+                          values.title = itemBD.title;
+                          values.text = itemBD.description;
+                          document.getElementById("topInfo_textarea").innerText = `${dateNT(itemBD.created_at).d} - ${dateNT(itemBD.created_at).h}`;
                         }
                       })
                     : ""

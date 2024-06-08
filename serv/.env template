@@ -1,5 +1,0 @@
-PORT=  #port of conection
-BD_HOST=  #hosting that uses the database
-BD_USER=  # username
-BD_PASSWORD=  # passowrd
-BD_DATABASE=  # name the database
